@@ -206,7 +206,7 @@ type ContainerState struct {
 }
 
 // NewContainer creates a container object.
-func NewContainer(name string, bundlePath string, logPath string, labels map[string]string, sandbox string, terminal bool) (*Container, error) {
+func NewContainer(name, bundlePath, logPath, sandbox string, labels map[string]string, terminal bool) (*Container, error) {
 	c := &Container{
 		name:       name,
 		bundlePath: bundlePath,

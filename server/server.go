@@ -2,7 +2,6 @@ package server
 
 import (
 	"fmt"
-	"os"
 	"sync"
 
 	"github.com/kubernetes-incubator/ocid/oci"
@@ -12,7 +11,6 @@ import (
 
 const (
 	runtimeAPIVersion = "v1alpha1"
-	imageStore        = "/var/lib/ocid/images"
 )
 
 // Server implements the RuntimeService and ImageService
@@ -33,10 +31,6 @@ func New(runtimePath, sandboxDir, containerDir string) (*Server, error) {
 	}
 
 	utils.StartReaper()
-
-	if err := os.MkdirAll(imageStore, 0755); err != nil {
-		return nil, err
-	}
 
 	r, err := oci.New(runtimePath, containerDir)
 	if err != nil {
