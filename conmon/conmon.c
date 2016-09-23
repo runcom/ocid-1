@@ -3,6 +3,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <stdbool.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -12,7 +13,7 @@
 #include <termios.h>
 #include <unistd.h>
 
-#include <glib.h>
+#include <linux/limits.h>
 
 #define pexit(fmt, ...)                                                        \
 	do {                                                                   \
@@ -56,6 +57,36 @@ static void tty_restore(void)
 		pexit("tcsetattr");
 }
 
+static int write_file(char *data, size_t data_len, char *pathfmt, ...)
+{
+	int fd, len, ret = 0;
+	unsigned int writelen = 0;
+	char path[PATH_MAX];
+
+	va_list ap;
+	va_start(ap, pathfmt);
+	len = vsnprintf(path, PATH_MAX, pathfmt, ap);
+	va_end(ap);
+	if (len < 0)
+		return -1;
+
+	fd = open(path, O_RDWR);
+	if (fd < 0) {
+		ret = -1;
+		goto out;
+	}
+
+	writelen = write(fd, data, data_len);
+	if (writelen != data_len) {
+		ret = -1;
+		goto out;
+	}
+
+ out:
+	close(fd);
+	return ret;
+}
+
 #define BUF_SIZE 256
 #define CMD_SIZE 1024
 #define MAX_EVENTS 10
@@ -64,7 +95,7 @@ int main(int argc, char *argv[])
 {
 	int ret;
 	int opt;
-	bool terminal = FALSE;
+	bool terminal = true;
 	const char *cid = NULL;
 	const char *runtime_path = NULL;
 	char cmd[CMD_SIZE];
@@ -88,7 +119,7 @@ int main(int argc, char *argv[])
 	while ((opt = getopt(argc, argv, "tc:r:")) != -1) {
 		switch (opt) {
 		case 't':
-			terminal = TRUE;
+			terminal = true;
 			break;
 		case 'c':
 			cid = optarg;
@@ -282,14 +313,14 @@ int main(int argc, char *argv[])
 			if (ret < 0) {
 				pexit("Failed to allocate memory for status");
 			}
-			g_file_set_contents("exit", status_str,
-					    strlen(status_str), &err);
-			if (err) {
+			if (write_file(status_str, strlen(status_str), "exit") <
+			    0) {
 				fprintf(stderr,
-					"Failed to write %s to exit file: %s\n",
-					status_str, err->message);
-				g_error_free(err);
+					"Failed to write %s to exit file\n",
+					status_str);
 				exit(1);
+			}
+			if (err) {
 			}
 			break;
 		}
