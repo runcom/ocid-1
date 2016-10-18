@@ -23,17 +23,20 @@ type Config struct {
 
 // RootConfig represents the root of the "ocid" TOML config table.
 type RootConfig struct {
-	// Root is a path to the "root directory" where all information not
+	// Root is a path to the "root directory" where data not
 	// explicitly handled by other options will be stored.
 	Root string `toml:"root"`
 
-	// SandboxDir is the directory where ocid will store all of its sandbox
-	// state and other information.
-	SandboxDir string `toml:"sandbox_dir"`
+	// RunRoot is a path to the "run directory" where state information not
+	// explicitly handled by other options will be stored.
+	RunRoot string `toml:"runroot"`
 
-	// ContainerDir is the directory where ocid will store all of its container
-	// state and other information.
-	ContainerDir string `toml:"container_dir"`
+	// Storage is the name of the storage driver which handles actually
+	// storing the contents of containers.
+	Storage string `toml:"storage_driver"`
+
+	// StorageOption is a list of storage driver specific options.
+	StorageOptions []string `toml:"storage_option"`
 
 	// LogDir is the default log directory were all logs will go unless kubelet
 	// tells us to put them somewhere else.
@@ -81,17 +84,15 @@ type RuntimeConfig struct {
 
 // ImageConfig represents the "ocid.image" TOML config table.
 type ImageConfig struct {
-	// Pause is the path to the statically linked pause container binary, used
-	// as the entrypoint for infra containers.
-	//
-	// TODO(cyphar): This should be replaced with a path to an OCI image
-	// bundle, once the OCI image/storage code has been implemented.
-	Pause string `toml:"pause"`
-
-	// ImageStore is the directory where the ocid image store will be stored.
-	// TODO: This is currently not really used because we don't have
-	//       containers/storage integrated.
-	ImageDir string `toml:"image_dir"`
+	// DefaultTransport is a value we prefix to image names that fail to
+	// validate source references.
+	DefaultTransport string `toml:"default_transport"`
+	// PauseImage is the name of an image which we use to instantiate infra
+	// containers.
+	PauseImage string `toml:"pause_image"`
+	// PauseCommand is the path of the binary we run in an infra
+	// container that's been instantiated using PauseImage.
+	PauseCommand string `toml:"pause_command"`
 }
 
 // NetworkConfig represents the "ocid.network" TOML config table

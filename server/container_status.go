@@ -9,6 +9,7 @@ import (
 
 // ContainerStatus returns status of the container.
 func (s *Server) ContainerStatus(ctx context.Context, req *pb.ContainerStatusRequest) (*pb.ContainerStatusResponse, error) {
+	s.Update()
 	logrus.Debugf("ContainerStatusRequest %+v", req)
 	c, err := s.getContainerFromRequest(req)
 	if err != nil {

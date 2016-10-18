@@ -11,6 +11,7 @@ import (
 
 // StopContainer stops a running container with a grace period (i.e., timeout).
 func (s *Server) StopContainer(ctx context.Context, req *pb.StopContainerRequest) (*pb.StopContainerResponse, error) {
+	s.Update()
 	logrus.Debugf("StopContainerRequest %+v", req)
 	c, err := s.getContainerFromRequest(req)
 	if err != nil {

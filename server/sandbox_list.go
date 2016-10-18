@@ -28,6 +28,7 @@ func filterSandbox(p *pb.PodSandbox, filter *pb.PodSandboxFilter) bool {
 
 // ListPodSandbox returns a list of SandBoxes.
 func (s *Server) ListPodSandbox(ctx context.Context, req *pb.ListPodSandboxRequest) (*pb.ListPodSandboxResponse, error) {
+	s.Update()
 	logrus.Debugf("ListPodSandboxRequest %+v", req)
 	var pods []*pb.PodSandbox
 	var podList []*sandbox

@@ -29,15 +29,17 @@ No bare options are used. The format of TOML can be simplified to:
 The `ocid` table supports the following options:
 
 
-**container_dir**=""
-  OCID container dir (default: "/var/lib/ocid/containers")
-
 **root**=""
-  OCID root dir (default: "/var/lib/ocid")
+  OCID root dir (default: "/var/lib/containers")
 
-**sandbox_dir**=""
-  OCID pod sandbox dir (default: "/var/lib/ocid/sandboxes")
+**runroot**=""
+  OCID state dir (default: "/var/run/containers")
 
+**storage-driver**=""
+  OCID storage driver (default is "devicemapper")
+
+**storage-option**=[]
+  OCID storage driver option list (no default)
 
 ## OCID.API TABLE
 
@@ -66,8 +68,14 @@ The `ocid` table supports the following options:
 
 ## OCID.IMAGE TABLE
 
-**pause**=""
-  Path to the pause executable (default: "/usr/libexec/ocid/pause")
+**default-transport**
+  A prefix to prepend to image names that can't be pulled as-is (default: "docker://")
+
+**pause-command**=""
+  Path to the pause executable in the pause image (default: "/pause")
+
+**pause-image**=""
+  Image which contains the pause executable (default: "kubernetes/pause")
 
 ## OCID.NETWORK TABLE
 

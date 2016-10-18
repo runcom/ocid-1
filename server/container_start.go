@@ -10,13 +10,18 @@ import (
 
 // StartContainer starts the container.
 func (s *Server) StartContainer(ctx context.Context, req *pb.StartContainerRequest) (*pb.StartContainerResponse, error) {
+	s.Update()
 	logrus.Debugf("StartContainerRequest %+v", req)
 	c, err := s.getContainerFromRequest(req)
 	if err != nil {
 		return nil, err
 	}
 
-	if err := s.runtime.StartContainer(c); err != nil {
+	if _, err = s.storage.StartContainer(c.ID()); err != nil {
+		return nil, fmt.Errorf("failed to mount container %s: %v", c.ID(), err)
+	}
+
+	if err = s.runtime.StartContainer(c); err != nil {
 		return nil, fmt.Errorf("failed to start container %s: %v", c.ID(), err)
 	}
 

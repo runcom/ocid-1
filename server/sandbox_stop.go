@@ -13,6 +13,7 @@ import (
 // StopPodSandbox stops the sandbox. If there are any running containers in the
 // sandbox, they should be force terminated.
 func (s *Server) StopPodSandbox(ctx context.Context, req *pb.StopPodSandboxRequest) (*pb.StopPodSandboxResponse, error) {
+	s.Update()
 	logrus.Debugf("StopPodSandboxRequest %+v", req)
 	sb, err := s.getPodSandboxFromRequest(req)
 	if err != nil {
@@ -50,7 +51,10 @@ func (s *Server) StopPodSandbox(ctx context.Context, req *pb.StopPodSandboxReque
 		cStatus := s.runtime.ContainerStatus(c)
 		if cStatus.Status != oci.ContainerStateStopped {
 			if err := s.runtime.StopContainer(c); err != nil {
-				return nil, fmt.Errorf("failed to stop container %s in sandbox %s: %v", c.Name(), sb.id, err)
+				return nil, fmt.Errorf("failed to stop container %s in pod sandbox %s: %v", c.Name(), sb.id, err)
+			}
+			if err := s.storage.StopContainer(c.ID()); err != nil {
+				return nil, fmt.Errorf("failed to unmount container %s in pod sandbox %s: %v", c.Name(), sb.id, err)
 			}
 		}
 	}
