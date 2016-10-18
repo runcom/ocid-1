@@ -15,9 +15,7 @@ OCID_BINARY=${OCID_BINARY:-${OCID_ROOT}/cri-o/ocid}
 OCIC_BINARY=${OCIC_BINARY:-${OCID_ROOT}/cri-o/ocic}
 # Path of the conmon binary.
 CONMON_BINARY=${CONMON_BINARY:-${OCID_ROOT}/cri-o/conmon/conmon}
-# Path of the pause binary.
-PAUSE_BINARY=${PAUSE_BINARY:-${OCID_ROOT}/cri-o/pause/pause}
-# Path of the default seccomp profile.
+# Path of the default seccomp profile
 SECCOMP_PROFILE=${SECCOMP_PROFILE:-${OCID_ROOT}/cri-o/seccomp.json}
 # Name of the default apparmor profile.
 APPARMOR_PROFILE=${APPARMOR_PROFILE:-ocid-default}
@@ -104,7 +102,7 @@ function start_ocid() {
 		apparmor="$APPARMOR_PROFILE"
 	fi
 
-	"$OCID_BINARY" --conmon "$CONMON_BINARY" --pause "$PAUSE_BINARY" --listen "$OCID_SOCKET" --runtime "$RUNC_BINARY" --root "$TESTDIR/ocid" --sandboxdir "$TESTDIR/sandboxes" --containerdir "$TESTDIR/ocid/containers" --seccomp-profile "$seccomp" --apparmor-profile "$apparmor" config >$OCID_CONFIG
+	"$OCID_BINARY" --conmon "$CONMON_BINARY" --listen "$OCID_SOCKET" --runtime "$RUNC_BINARY" --root "$TESTDIR/ocid" --runroot "$TESTDIR/ocid-run" --seccomp-profile "$seccomp" --apparmor-profile "$apparmor" config >$OCID_CONFIG
 	"$OCID_BINARY" --debug --config "$OCID_CONFIG" & OCID_PID=$!
 	wait_until_reachable
 }
@@ -139,6 +137,7 @@ function cleanup_pods() {
 function stop_ocid() {
 	if [ "$OCID_PID" != "" ]; then
 		kill "$OCID_PID" >/dev/null 2>&1
+		wait "$OCID_PID"
 		rm -f "$OCID_CONFIG"
 	fi
 }

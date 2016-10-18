@@ -8,16 +8,19 @@ ocid - Enable OCI Kubernetes Container Runtime daemon
 **ocid**
 [**--config**=[*value*]]
 [**--conmon**=[*value*]]
-[**--containerdir**=[*value*]]
 [**--debug**]
+[**--default_transport**=[*value*]]
 [**--help**|**-h**]
 [**--listen**=[*value*]]
 [**--log**=[*value*]]
 [**--log-format value**]
-[**--pause**=[*value*]]
+[**--pause_command**=[*value*]]
+[**--pause_image**=[*value*]]
 [**--root**=[*value*]]
+[**--runroot**=[*value*]]
 [**--runtime**=[*value*]]
-[**--sandboxdir**=[*value*]]
+[**--storage_driver**=[*value*]]
+[**--storage_option**=[*value*]]
 [**--selinux**]
 [**--seccomp-profile**=[*value*]]
 [**--apparmor-profile**=[*value*]]
@@ -41,17 +44,20 @@ ocid is meant to provide an integration path between OCI conformant runtimes and
 
 # GLOBAL OPTIONS
 
+**--apparmor_profile**=""
+  Name of the apparmor profile to be used as the runtime's default (default: "ocid-default")
+
 **--config**=""
   path to configuration file
 
 **--conmon**=""
   path to the conmon executable (default: "/usr/libexec/ocid/conmon")
 
-**--containerdir**=""
-  OCID container dir (default: "/var/lib/ocid/containers")
-
 **--debug**
   Enable debug output for logging
+
+**--default_transport**
+  A prefix to prepend to image names that can't be pulled as-is.
 
 **--help, -h**
   Print usage statement
@@ -65,17 +71,20 @@ ocid is meant to provide an integration path between OCI conformant runtimes and
 **--log-format**=""
   Set the format used by logs ('text' (default), or 'json') (default: "text")
 
-**--pause**=""
-  Path to the pause executable (default: "/usr/libexec/ocid/pause")
+**--pause_command**=""
+  Path to the pause executable in the pause image (default: "/pause")
+
+**--pause_image**=""
+  Image which contains the pause executable (default: "kubernetes/pause")
 
 **--root**=""
-  OCID root dir (default: "/var/lib/ocid")
+  OCID root dir (default: "/var/lib/containers")
+
+**--runroot**=""
+  OCID state dir (default: "/var/run/containers")
 
 **--runtime**=""
   OCI runtime path (default: "/usr/bin/runc")
-
-**--sandboxdir**=""
-  OCID pod sandbox dir (default: "/var/lib/ocid/sandboxes")
 
 **--selinux**=*true*|*false*
   Enable selinux support (default: false)
@@ -83,8 +92,11 @@ ocid is meant to provide an integration path between OCI conformant runtimes and
 **--seccomp_profile**=""
   Path to the seccomp json profile to be used as the runtime's default (default: "/etc/ocid/seccomp.json")
 
-**--apparmor_profile**=""
-  Name of the apparmor profile to be used as the runtime's default (default: "ocid-default")
+**--storage_driver**
+  OCI storage driver (default: "devicemapper")
+
+**--storage_option**
+  OCI storage driver option (no default)
 
 **--version, -v**
   Print the version

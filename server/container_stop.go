@@ -27,6 +27,10 @@ func (s *Server) StopContainer(ctx context.Context, req *pb.StopContainerRequest
 		}
 	}
 
+	if err := s.storage.StopContainer(c.ID()); err != nil {
+		return nil, fmt.Errorf("failed to unmount container %s: %v", c.ID(), err)
+	}
+
 	resp := &pb.StopContainerResponse{}
 	logrus.Debugf("StopContainerResponse: %+v", resp)
 	return resp, nil

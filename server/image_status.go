@@ -9,8 +9,20 @@ import (
 // ImageStatus returns the status of the image.
 func (s *Server) ImageStatus(ctx context.Context, req *pb.ImageStatusRequest) (*pb.ImageStatusResponse, error) {
 	logrus.Debugf("ImageStatus: %+v", req)
-	// TODO
-	// containers/storage will take care of this by looking inside /var/lib/ocid/images
-	// and getting the image status
-	return &pb.ImageStatusResponse{}, nil
+	image := ""
+	img := req.GetImage()
+	if img != nil {
+		image = img.GetImage()
+	}
+	status, err := s.images.ImageStatus(ctx, image)
+	if err != nil {
+		return nil, err
+	}
+	return &pb.ImageStatusResponse{
+		Image: &pb.Image{
+			Id:       &status.ID,
+			RepoTags: status.Names,
+			Size_:    status.Size,
+		},
+	}, nil
 }

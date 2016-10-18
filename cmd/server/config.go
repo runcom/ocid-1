@@ -2,7 +2,6 @@ package main
 
 import (
 	"os"
-	"path/filepath"
 	"text/template"
 
 	"github.com/kubernetes-incubator/cri-o/server"
@@ -11,9 +10,12 @@ import (
 )
 
 const (
-	ocidRoot            = "/var/lib/ocid"
+	ocidRoot            = "/var/lib/containers"
+	ocidRunRoot         = "/var/run/containers"
 	conmonPath          = "/usr/libexec/ocid/conmon"
-	pausePath           = "/usr/libexec/ocid/pause"
+	pauseImage          = "kubernetes/pause"
+	pauseCommand        = "/pause"
+	defaultTransport    = "docker://"
 	seccompProfilePath  = "/etc/ocid/seccomp.json"
 	apparmorProfileName = "ocid-default"
 )
@@ -22,17 +24,21 @@ var commentedConfigTemplate = template.Must(template.New("config").Parse(`
 # The "ocid" table contains all of the server options.
 [ocid]
 
-# root is a path to the "root directory". OCID stores all of its state
-# data, including container images, in this directory.
+# root is a path to the "root directory". OCID stores all of its data,
+# including container images, in this directory.
 root = "{{ .Root }}"
 
-# sandbox_dir is the directory where ocid will store all of its sandbox
-# state and other information.
-sandbox_dir = "{{ .SandboxDir }}"
+# run is a path to the "run directory". OCID stores all of its state
+# in this directory.
+runroot = "{{ .RunRoot }}"
 
-# container_dir is the directory where ocid will store all of its
-# container state and other information.
-container_dir = "{{ .ContainerDir }}"
+# storage_driver select which storage driver is used to manage storage
+# of images and containers.
+storage_driver = "{{ .Storage }}"
+
+# storage_option is used to pass an option to the storage driver.
+storage_option = [
+{{ range $opt := .StorageOption }}{{ printf "\t%q,\n" $opt }}{{ end }}]
 
 # The "ocid.api" table contains settings for the kubelet/gRPC
 # interface (which is also used by ocic).
@@ -73,9 +79,16 @@ apparmor_profile = "{{ .ApparmorProfile }}"
 # management of OCI images.
 [ocid.image]
 
-# pause is the path to the statically linked pause container binary, used
-# as the entrypoint for infra containers.
-pause = "{{ .Pause }}"
+# default_transport is the prefix we try prepending to an image name if the
+# image name as we receive it can't be parsed as a valid source reference
+default_transport = "{{ .DefaultTransport }}"
+
+# pause_image is the image which we use to instantiate infra containers.
+pause_image = "{{ .PauseImage }}"
+
+# pause_command is the command to run in a pause_image to have a container just
+# sit there
+pause_command = "{{ .PauseCommand }}"
 `))
 
 // TODO: Currently ImageDir isn't really used, so we haven't added it to this
@@ -85,10 +98,9 @@ pause = "{{ .Pause }}"
 func DefaultConfig() *server.Config {
 	return &server.Config{
 		RootConfig: server.RootConfig{
-			Root:         ocidRoot,
-			SandboxDir:   filepath.Join(ocidRoot, "sandboxes"),
-			ContainerDir: filepath.Join(ocidRoot, "containers"),
-			LogDir:       "/var/log/ocid/pods",
+			Root:    ocidRoot,
+			RunRoot: ocidRunRoot,
+			LogDir:  "/var/log/ocid/pods",
 		},
 		APIConfig: server.APIConfig{
 			Listen: "/var/run/ocid.sock",
@@ -104,8 +116,9 @@ func DefaultConfig() *server.Config {
 			ApparmorProfile: apparmorProfileName,
 		},
 		ImageConfig: server.ImageConfig{
-			Pause:    pausePath,
-			ImageDir: filepath.Join(ocidRoot, "store"),
+			DefaultTransport: defaultTransport,
+			PauseImage:       pauseImage,
+			PauseCommand:     pauseCommand,
 		},
 	}
 }

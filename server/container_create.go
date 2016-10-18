@@ -4,17 +4,16 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
 	"syscall"
 
 	"github.com/Sirupsen/logrus"
+	storage "github.com/containers/storage/cri"
 	"github.com/docker/docker/pkg/stringid"
 	"github.com/kubernetes-incubator/cri-o/oci"
 	"github.com/kubernetes-incubator/cri-o/server/apparmor"
 	"github.com/kubernetes-incubator/cri-o/server/seccomp"
-	"github.com/kubernetes-incubator/cri-o/utils"
 	"github.com/opencontainers/runc/libcontainer/label"
 	"github.com/opencontainers/runtime-tools/generate"
 	"golang.org/x/net/context"
@@ -62,27 +61,17 @@ func (s *Server) CreateContainer(ctx context.Context, req *pb.CreateContainerReq
 		return nil, err
 	}
 
-	// containerDir is the dir for the container bundle.
-	containerDir := filepath.Join(s.runtime.ContainerDir(), containerID)
 	defer func() {
 		if err != nil {
 			s.releaseContainerName(containerName)
-			err1 := os.RemoveAll(containerDir)
+			err1 := s.storage.DeleteContainer(containerID)
 			if err1 != nil {
 				logrus.Warnf("Failed to cleanup container directory: %v")
 			}
 		}
 	}()
 
-	if _, err = os.Stat(containerDir); err == nil {
-		return nil, fmt.Errorf("container (%s) already exists", containerDir)
-	}
-
-	if err = os.MkdirAll(containerDir, 0755); err != nil {
-		return nil, err
-	}
-
-	container, err := s.createSandboxContainer(containerID, containerName, sb, containerDir, containerConfig)
+	container, err := s.createSandboxContainer(ctx, containerID, containerName, sb, req.GetSandboxConfig(), containerConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -110,16 +99,15 @@ func (s *Server) CreateContainer(ctx context.Context, req *pb.CreateContainerReq
 	return resp, nil
 }
 
-func (s *Server) createSandboxContainer(containerID string, containerName string, sb *sandbox, containerDir string, containerConfig *pb.ContainerConfig) (*oci.Container, error) {
+func (s *Server) createSandboxContainer(ctx context.Context, containerID string, containerName string, sb *sandbox, SandboxConfig *pb.PodSandboxConfig, containerConfig *pb.ContainerConfig) (*oci.Container, error) {
 	if sb == nil {
 		return nil, errors.New("createSandboxContainer needs a sandbox")
 	}
+
+	// TODO: factor generating/updating the spec into something other projects can vendor
+
 	// creates a spec Generator with the default spec.
 	specgen := generate.New()
-
-	// by default, the root path is an empty string.
-	// here set it to be "rootfs".
-	specgen.SetRootPath("rootfs")
 
 	args := containerConfig.GetArgs()
 	if args == nil {
@@ -306,10 +294,6 @@ func (s *Server) createSandboxContainer(containerID string, containerName string
 		return nil, err
 	}
 
-	if err = specgen.SaveToFile(filepath.Join(containerDir, "config.json"), generate.ExportOptions{}); err != nil {
-		return nil, err
-	}
-
 	imageSpec := containerConfig.GetImage()
 	if imageSpec == nil {
 		return nil, fmt.Errorf("CreateContainerRequest.ContainerConfig.Image is nil")
@@ -320,13 +304,38 @@ func (s *Server) createSandboxContainer(containerID string, containerName string
 		return nil, fmt.Errorf("CreateContainerRequest.ContainerConfig.Image.Image is empty")
 	}
 
-	// TODO: copy the rootfs into the bundle.
-	// Currently, utils.CreateFakeRootfs is used to populate the rootfs.
-	if err = utils.CreateFakeRootfs(containerDir, image); err != nil {
+	storageMetadata := storage.RuntimeContainerMetadata{
+		Pod:           false,
+		PodName:       sb.name,
+		PodID:         sb.id,
+		ImageName:     image,
+		ContainerName: containerName,
+		MetadataName:  containerConfig.GetMetadata().GetName(),
+		Attempt:       containerConfig.GetMetadata().GetAttempt(),
+		MountLabel:    sb.mountLabel,
+	}
+	containerInfo, err := s.storage.CreateContainer(ctx, storageMetadata, containerID)
+	if err != nil {
 		return nil, err
 	}
 
-	container, err := oci.NewContainer(containerID, containerName, containerDir, logPath, labels, metadata, sb.id, containerConfig.GetTty())
+	mountPoint, err := s.storage.StartContainer(containerID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to mount container %s(%s): %v", containerName, containerID, err)
+	}
+
+	// by default, the root path is an empty string. set it now.
+	specgen.SetRootPath(mountPoint)
+
+	saveOptions := generate.ExportOptions{}
+	if err = specgen.SaveToFile(filepath.Join(containerInfo.Dir, "config.json"), saveOptions); err != nil {
+		return nil, err
+	}
+	if err = specgen.SaveToFile(filepath.Join(containerInfo.RunDir, "config.json"), saveOptions); err != nil {
+		return nil, err
+	}
+
+	container, err := oci.NewContainer(containerID, containerName, containerInfo.RunDir, logPath, labels, metadata, sb.id, containerConfig.GetTty())
 	if err != nil {
 		return nil, err
 	}
