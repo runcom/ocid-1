@@ -49,7 +49,7 @@ PATH=$PATH:$TESTDIR
 # Run ocid using the binary specified by $OCID_BINARY.
 # This must ONLY be run on engines created with `start_ocid`.
 function ocid() {
-	"$OCID_BINARY" "$@"
+	"$OCID_BINARY" --listen "$OCID_SOCKET" "$@"
 }
 
 # Run ocic using the binary specified by $OCID_BINARY.
@@ -115,6 +115,18 @@ function cleanup_ctrs() {
 			do
 			   ocic ctr stop --id "$line" || true
 			   ocic ctr remove --id "$line"
+			done
+		fi
+	fi
+}
+
+function cleanup_images() {
+	run ocic image list --quiet
+	if [ "$status" -eq 0 ]; then
+		if [ "$output" != "" ]; then
+			printf '%s\n' "$output" | while IFS= read -r line
+			do
+			   ocic image remove --id "$line"
 			done
 		fi
 	fi
