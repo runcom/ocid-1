@@ -20,6 +20,9 @@ RUN apt-get update && apt-get install -y \
     python-minimal \
     libglib2.0-dev \
     libapparmor-dev \
+    btrfs-tools \
+    libdevmapper-dev \
+    libgpgme11-dev \
     --no-install-recommends
 
 # install bats
@@ -46,6 +49,10 @@ RUN set -x \
 	&& make static BUILDTAGS="seccomp selinux" \
 	&& cp runc /usr/local/bin/runc \
 	&& rm -rf "$GOPATH"
+
+# Make sure we have some policy for pulling images
+RUN mkdir -p /etc/containers
+COPY test/policy.json /etc/containers/policy.json
 
 WORKDIR /go/src/github.com/kubernetes-incubator/cri-o
 
