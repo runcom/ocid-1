@@ -20,6 +20,10 @@ func (s *Server) StartContainer(ctx context.Context, req *pb.StartContainerReque
 		return nil, fmt.Errorf("failed to start container %s: %v", c.ID(), err)
 	}
 
+	if err = s.runtime.UpdateStatus(container); err != nil {
+		return nil, err
+	}
+
 	resp := &pb.StartContainerResponse{}
 	logrus.Debugf("StartContainerResponse %+v", resp)
 	return resp, nil
