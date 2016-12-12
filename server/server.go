@@ -86,7 +86,20 @@ func (s *Server) loadContainer(id string) error {
 		return err
 	}
 
-	ctr, err := oci.NewContainer(id, name, containerPath, m.Annotations["ocid/log_path"], labels, &metadata, sb.id, tty)
+	var img *pb.ImageSpec
+	image, ok := m.Annotations["ocid/image"]
+	if ok {
+		img = &pb.ImageSpec{
+			Image: &image,
+		}
+	}
+
+	annotations := make(map[string]string)
+	if err = json.Unmarshal([]byte(m.Annotations["ocid/annotations"]), &annotations); err != nil {
+		return err
+	}
+
+	ctr, err := oci.NewContainer(id, name, containerPath, m.Annotations["ocid/log_path"], labels, annotations, img, &metadata, sb.id, tty)
 	if err != nil {
 		return err
 	}
@@ -159,7 +172,7 @@ func (s *Server) loadSandbox(id string) error {
 	if err != nil {
 		return err
 	}
-	scontainer, err := oci.NewContainer(m.Annotations["ocid/container_id"], cname, sandboxPath, sandboxPath, labels, nil, id, false)
+	scontainer, err := oci.NewContainer(m.Annotations["ocid/container_id"], cname, sandboxPath, sandboxPath, labels, annotations, nil, nil, id, false)
 	if err != nil {
 		return err
 	}
