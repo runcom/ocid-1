@@ -16,7 +16,6 @@ import (
 	"github.com/kubernetes-incubator/cri-o/oci"
 	"github.com/kubernetes-incubator/cri-o/server/apparmor"
 	"github.com/kubernetes-incubator/cri-o/server/seccomp"
-	"github.com/kubernetes-incubator/cri-o/utils"
 	"github.com/opencontainers/runc/libcontainer/label"
 	rspec "github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/rajatchopra/ocicni"
@@ -283,14 +282,6 @@ func (s *Server) Shutdown() error {
 
 // New creates a new Server with options provided
 func New(config *Config) (*Server, error) {
-	// TODO: This will go away later when we have wrapper process or systemd acting as
-	// subreaper.
-	if err := utils.SetSubreaper(1); err != nil {
-		return nil, fmt.Errorf("failed to set server as subreaper: %v", err)
-	}
-
-	utils.StartReaper()
-
 	store, err := sstorage.GetStore(sstorage.StoreOptions{
 		RunRoot:            config.RunRoot,
 		GraphRoot:          config.Root,
