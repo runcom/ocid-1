@@ -50,6 +50,9 @@ conmon:
 pause:
 	make -C $@
 
+bin2img:
+	make -C test/$@
+
 GO_SRC =  $(shell find . -name \*.go)
 ocid: $(GO_SRC) | ${OCID_LINK}
 	$(GO) build --tags "$(BUILDTAGS)" -o $@ ./cmd/server/
@@ -73,6 +76,7 @@ clean:
 	find . -name \#\* -delete
 	make -C conmon clean
 	make -C pause clean
+	make -C test/bin2img clean
 
 ocidimage:
 	docker build -t ${OCID_IMAGE} .
@@ -86,7 +90,7 @@ integration: ocidimage
 localintegration: binaries
 	./test/test_runner.sh ${TESTFLAGS}
 
-binaries: ocid ocic kpod conmon pause
+binaries: ocid ocic kpod conmon pause bin2img
 
 MANPAGES_MD := $(wildcard docs/*.md)
 MANPAGES    := $(MANPAGES_MD:%.md=%)
@@ -165,6 +169,7 @@ install.tools: .install.gitvalidation .install.gometalinter .install.md2man
 	GOPATH=${SYSTEM_GOPATH} go get github.com/cpuguy83/go-md2man
 
 .PHONY: \
+	bin2img \
 	binaries \
 	clean \
 	conmon \

@@ -11,3 +11,4 @@ vendor/src/github.com/kubernetes-incubator/cri-o
 ocid.conf
 *.orig
 *.rej
+test/bin2img/bin2img
