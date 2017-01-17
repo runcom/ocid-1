@@ -23,5 +23,7 @@ func (s *Server) PullImage(ctx context.Context, req *pb.PullImageRequest) (*pb.P
 	if err != nil {
 		return nil, err
 	}
-	return &pb.PullImageResponse{}, nil
+	return &pb.PullImageResponse{
+		ImageRef: &image,
+	}, nil
 }
