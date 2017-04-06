@@ -93,7 +93,7 @@ static GOptionEntry entries[] =
   { NULL }
 };
 
-int set_k8s_timestamp(char *buf, ssize_t buflen, const char *stream_type)
+int set_k8s_timestamp(int logfd, char *buf, ssize_t buflen, const char *stream_type, const char *log)
 {
 	time_t now = time(NULL);
 	struct tm *tm;
@@ -108,10 +108,14 @@ int set_k8s_timestamp(char *buf, ssize_t buflen, const char *stream_type)
 		off_sign = '-';
 		off = -off;
 	}
-	snprintf(buf, buflen, "%d-%02d-%02dT%02d:%02d:%02d%c%02d:%02d %s ",
+	snprintf(buf, buflen, "%d-%02d-%02dT%02d:%02d:%02d%c%02d:%02d %s %s",
 		tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday,
 		tm->tm_hour, tm->tm_min, tm->tm_sec,
-		off_sign, off / 3600, off % 3600, stream_type);
+		off_sign, off / 3600, off % 3600, stream_type, log);
+
+	if (write(logfd, buf, buflen-1) != buflen-1) {
+		nwarn("partial/failed write ts (logFd)");
+	}
 
 	return 0;
 }
@@ -124,7 +128,6 @@ int set_k8s_timestamp(char *buf, ssize_t buflen, const char *stream_type)
 int write_with_timestamps(int logfd, const char *buf, ssize_t buflen)
 {
 	#define TSBUFLEN 34
-	char tsbuf[TSBUFLEN];
 	static bool last_buf_ended_with_newline = TRUE;
 
 	g_auto(GStrv) lines = g_strsplit(buf, "\n", -1);
@@ -147,21 +150,19 @@ int write_with_timestamps(int logfd, const char *buf, ssize_t buflen)
 		 */
 		if (i != 0 || (i == 0 && last_buf_ended_with_newline)) {
 			ninfo("Adding timestamp");
-			int rc = set_k8s_timestamp(tsbuf, TSBUFLEN, "stdout");
+			ssize_t len = strlen(line);
+			char tsbuf[TSBUFLEN+len];
+			int rc = set_k8s_timestamp(logfd, tsbuf, TSBUFLEN+len, "stdout", line);
 			if (rc < 0) {
 				nwarn("failed to set timestamp");
-			} else {
-				if (write(logfd, tsbuf, TSBUFLEN) != TSBUFLEN) {
-					nwarn("partial/failed write ts (logFd)");
-				}
 			}
-		}
-
-		/* Log output to logfd. */
-		ssize_t len = strlen(line);
-		if (write(logfd, line, len) != len) {
-			nwarn("partial/failed write (logFd)");
-			return -1;
+		} else {
+			/* Log output to logfd. */
+			ssize_t len = strlen(line);
+			if (write(logfd, line, len) != len) {
+				nwarn("partial/failed write (logFd)");
+				return -1;
+			}
 		}
 		/* Write the line ending */
 		if (write(logfd, "\n", 1) != 1) {
@@ -483,7 +484,6 @@ int main(int argc, char *argv[])
 					if (num_read <= 0)
 						goto out;
 
-					buf[num_read] = '\0';
 					ninfo("read a chunk: (fd=%d) '%s'", mfd, buf);
 
 					/* Insert CRI mandated timestamps in the buffer for each line */
