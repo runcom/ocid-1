@@ -487,6 +487,9 @@ func (r *Runtime) UpdateStatus(c *Container) error {
 	out, err := exec.Command(r.Path(c), "state", c.name).CombinedOutput()
 	if err != nil {
 		if strings.Contains(string(out), "does not exist") {
+			c.state.Status = ContainerStateStopped
+			c.state.Finished = time.Now()
+			c.state.ExitCode = 255
 			return nil
 		}
 		return fmt.Errorf("error getting container state for %s: %s: %q", c.name, err, out)
