@@ -3,6 +3,10 @@ FROM golang:1.7
 # libseccomp in jessie is not _quite_ new enough -- need backports version
 RUN echo 'deb http://httpredir.debian.org/debian jessie-backports main' > /etc/apt/sources.list.d/backports.list
 
+#
+# XXX: when adding dependencies here make sure to update the README.md as well
+# as contrib/test/crio-integration-playbook.yaml.
+#
 RUN apt-get update && apt-get install -y \
     build-essential \
     curl \
