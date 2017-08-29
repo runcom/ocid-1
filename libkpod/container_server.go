@@ -293,6 +293,11 @@ func (c *ContainerServer) LoadSandbox(id string) error {
 		return err
 	}
 
+	var ip string
+	if err = json.Unmarshal([]byte(m.Annotations[annotations.IP]), &ip); err != nil {
+		return err
+	}
+
 	processLabel, mountLabel, err := label.InitLabels(label.DupSecOpt(m.Process.SelinuxLabel))
 	if err != nil {
 		return err
@@ -310,6 +315,7 @@ func (c *ContainerServer) LoadSandbox(id string) error {
 	if err != nil {
 		return err
 	}
+	sb.AddIP(ip)
 
 	// We add a netNS only if we can load a permanent one.
 	// Otherwise, the sandbox will live in the host namespace.
