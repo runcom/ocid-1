@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/containers/storage"
+	"github.com/cri-o/ocicni/pkg/ocicni"
 	"github.com/kubernetes-incubator/cri-o/libkpod/sandbox"
 	"github.com/kubernetes-incubator/cri-o/oci"
 	"github.com/kubernetes-incubator/cri-o/pkg/annotations"
@@ -22,10 +23,8 @@ import (
 	"github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
 	"golang.org/x/sys/unix"
-	"k8s.io/kubernetes/pkg/api/v1"
 	pb "k8s.io/kubernetes/pkg/kubelet/apis/cri/v1alpha1/runtime"
 	"k8s.io/kubernetes/pkg/kubelet/leaky"
-	"k8s.io/kubernetes/pkg/kubelet/network/hostport"
 	"k8s.io/kubernetes/pkg/kubelet/types"
 )
 
@@ -515,20 +514,20 @@ func (s *Server) RunPodSandbox(ctx context.Context, req *pb.RunPodSandboxRequest
 	return resp, nil
 }
 
-func convertPortMappings(in []*pb.PortMapping) []*hostport.PortMapping {
-	if in == nil {
-		return nil
-	}
-	out := make([]*hostport.PortMapping, len(in))
-	for i, v := range in {
-		out[i] = &hostport.PortMapping{
-			HostPort:      v.HostPort,
-			ContainerPort: v.ContainerPort,
-			Protocol:      v1.Protocol(v.Protocol.String()),
-			HostIP:        v.HostIp,
+func convertPortMappings(criPortMappings []*pb.PortMapping) []ocicni.PortMapping {
+	var portMappings []ocicni.PortMapping
+	for _, mapping := range criPortMappings {
+		if mapping.HostPort <= 0 {
+			continue
 		}
+		portMappings = append(portMappings, ocicni.PortMapping{
+			HostPort:      mapping.HostPort,
+			ContainerPort: mapping.ContainerPort,
+			Protocol:      strings.ToLower(mapping.Protocol.String()),
+			HostIP:        mapping.HostIp,
+		})
 	}
-	return out
+	return portMappings
 }
 
 func getHostname(id, hostname string, hostNetwork bool) (string, error) {

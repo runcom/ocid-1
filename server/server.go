@@ -26,7 +26,6 @@ import (
 	"github.com/sirupsen/logrus"
 	knet "k8s.io/apimachinery/pkg/util/net"
 	pb "k8s.io/kubernetes/pkg/kubelet/apis/cri/v1alpha1/runtime"
-	"k8s.io/kubernetes/pkg/kubelet/network/hostport"
 	"k8s.io/kubernetes/pkg/kubelet/server/streaming"
 	iptablesproxy "k8s.io/kubernetes/pkg/proxy/iptables"
 	utildbus "k8s.io/kubernetes/pkg/util/dbus"
@@ -56,9 +55,8 @@ type Server struct {
 	*libkpod.ContainerServer
 	config Config
 
-	updateLock      sync.RWMutex
-	netPlugin       ocicni.CNIPlugin
-	hostportManager hostport.HostPortManager
+	updateLock sync.RWMutex
+	netPlugin  ocicni.CNIPlugin
 
 	seccompEnabled bool
 	seccompProfile seccomp.Seccomp
@@ -201,13 +199,11 @@ func New(config *Config) (*Server, error) {
 	}
 	iptInterface := utiliptables.New(utilexec.New(), utildbus.New(), utiliptables.ProtocolIpv4)
 	iptInterface.EnsureChain(utiliptables.TableNAT, iptablesproxy.KubeMarkMasqChain)
-	hostportManager := hostport.NewHostportManager()
 
 	s := &Server{
 		ContainerServer: containerServer,
 
 		netPlugin:       netPlugin,
-		hostportManager: hostportManager,
 		config:          *config,
 		seccompEnabled:  seccomp.IsEnabled(),
 		appArmorEnabled: apparmor.IsEnabled(),

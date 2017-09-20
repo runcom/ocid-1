@@ -9,6 +9,7 @@ import (
 	"sync"
 
 	"github.com/containernetworking/plugins/pkg/ns"
+	"github.com/cri-o/ocicni/pkg/ocicni"
 	"github.com/docker/docker/pkg/mount"
 	"github.com/docker/docker/pkg/symlink"
 	"github.com/kubernetes-incubator/cri-o/oci"
@@ -16,7 +17,6 @@ import (
 	"golang.org/x/sys/unix"
 	"k8s.io/apimachinery/pkg/fields"
 	pb "k8s.io/kubernetes/pkg/kubelet/apis/cri/v1alpha1/runtime"
-	"k8s.io/kubernetes/pkg/kubelet/network/hostport"
 )
 
 // NetNs handles data pertaining a network namespace
@@ -153,7 +153,7 @@ type Sandbox struct {
 	resolvPath     string
 	hostnamePath   string
 	hostname       string
-	portMappings   []*hostport.PortMapping
+	portMappings   []ocicni.PortMapping
 	stopped        bool
 	// ipv4 or ipv6 cache
 	ip string
@@ -181,7 +181,7 @@ var (
 // New creates and populates a new pod sandbox
 // New sandboxes have no containers, no infra container, and no network namespaces associated with them
 // An infra container must be attached before the sandbox is added to the state
-func New(id, namespace, name, kubeName, logDir string, labels, annotations map[string]string, processLabel, mountLabel string, metadata *pb.PodSandboxMetadata, shmPath, cgroupParent string, privileged, trusted bool, resolvPath, hostname string, portMappings []*hostport.PortMapping) (*Sandbox, error) {
+func New(id, namespace, name, kubeName, logDir string, labels, annotations map[string]string, processLabel, mountLabel string, metadata *pb.PodSandboxMetadata, shmPath, cgroupParent string, privileged, trusted bool, resolvPath, hostname string, portMappings []ocicni.PortMapping) (*Sandbox, error) {
 	sb := new(Sandbox)
 	sb.id = id
 	sb.namespace = namespace
@@ -318,7 +318,7 @@ func (s *Sandbox) Hostname() string {
 }
 
 // PortMappings returns a list of port mappings between the host and the sandbox
-func (s *Sandbox) PortMappings() []*hostport.PortMapping {
+func (s *Sandbox) PortMappings() []ocicni.PortMapping {
 	return s.portMappings
 }
 
