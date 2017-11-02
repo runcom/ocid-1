@@ -12,6 +12,7 @@ MANDIR ?= ${PREFIX}/share/man
 ETCDIR ?= ${DESTDIR}/etc
 ETCDIR_CRIO ?= ${ETCDIR}/crio
 BUILDTAGS ?= seccomp $(shell hack/btrfs_tag.sh) $(shell hack/libdm_tag.sh) $(shell hack/btrfs_installed_tag.sh) $(shell hack/ostree_tag.sh) $(shell hack/selinux_tag.sh)
+BUILD_DIR := _output
 
 BASHINSTALLDIR=${PREFIX}/share/bash-completion/completions
 OCIUMOUNTINSTALLDIR=$(PREFIX)/share/oci-umount/oci-umount.d
@@ -124,6 +125,11 @@ integration: crioimage
 testunit:
 	$(GO) test -tags "$(BUILDTAGS)" -cover $(PACKAGES)
 
+$(BUILD_DIR)/$(TARBALL): binaries docs crio.conf hack/versions
+	@BUILD_DIR=$(BUILD_DIR) TARBALL=$(TARBALL) ./hack/release.sh
+
+release: $(BUILD_DIR)/$(TARBALL)
+
 localintegration: clean binaries test-binaries
 	./test/test_runner.sh ${TESTFLAGS}
 
@@ -169,6 +175,10 @@ install.config:
 install.completions:
 	install ${SELINUXOPT} -d -m 755 ${BASHINSTALLDIR}
 	install ${SELINUXOPT} -m 644 -D completions/bash/kpod ${BASHINSTALLDIR}
+
+install.policy:
+	install ${SELINUXOPT} -d -m 755 ${ETCDIR}/containers
+	install ${SELINUXOPT} -m 644 policy.json $(ETCDIR)/containers/policy.json
 
 install.systemd:
 	install ${SELINUXOPT} -D -m 644 contrib/systemd/crio.service $(PREFIX)/lib/systemd/system/crio.service

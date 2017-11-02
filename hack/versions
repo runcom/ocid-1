@@ -1,0 +1,3 @@
+# keep these in sync with Dockerfile in main root
+RUNC_VERSION=84a082bfef6f932de921437815355186db37aeb1
+CRITOOL_VERSION=16e6fe4d7199c5689db4630a9330e6a8a12cecd1
