@@ -1,0 +1,8 @@
+[package]
+name = "conmon-rs"
+version = "0.1.0"
+authors = ["Antonio Murdaca <runcom@redhat.com>"]
+
+[dependencies]
+clap = "2"
+nix = "0.9.0"
