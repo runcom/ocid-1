@@ -1,5 +1,7 @@
 #[macro_use]
 extern crate clap;
+#[macro_use(defer)]
+extern crate scopeguard;
 
 extern crate nix;
 use std::env;
@@ -120,10 +122,12 @@ fn main() {
                                       nix::fcntl::O_RDONLY | nix::fcntl::O_CLOEXEC,
                                       nix::sys::stat::Mode::empty())
         .unwrap();
+    defer!(nix::unistd::close(dev_null_r).unwrap());
     let dev_null_w = nix::fcntl::open("/dev/null",
                                       nix::fcntl::O_WRONLY | nix::fcntl::O_CLOEXEC,
                                       nix::sys::stat::Mode::empty())
         .unwrap();
+    defer!(nix::unistd::close(dev_null_w).unwrap());
     println!("{:?}", dev_null_r);
     println!("{:?}", dev_null_w);
 
@@ -134,9 +138,9 @@ fn main() {
         // spawning any childred or exiting, to ensure the
         // parent can put us in the right cgroup.
         // TODO(runcom): check return
-        nix::unistd::read(start_pipe_fd, &mut buf);
+        nix::unistd::read(start_pipe_fd, &mut buf).unwrap();
         // TODO(runcom): check return
-        nix::unistd::close(start_pipe_fd);
+        nix::unistd::close(start_pipe_fd).unwrap();
     }
 
     let opt_cid = options.value_of("cid").unwrap();
